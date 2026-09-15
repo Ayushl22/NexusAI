@@ -75,8 +75,9 @@ const DocumentDetailPage = () => {
         setActionLoading(true);
         try {
             const response = await generateFlashcards(id);
-            setFlashcards(response.flashcards || []);
-            toast.success("Flashcards generated");
+            const generatedFlashcards = response.flashcards || [];
+            setFlashcards(generatedFlashcards);
+            toast.success(`${generatedFlashcards.length} flashcards generated`);
         } catch (error) {
             showAIError(error, handleGenerateFlashcards);
         } finally {
@@ -93,7 +94,7 @@ const DocumentDetailPage = () => {
             setAnswers([]);
             setSubmitted(false);
             setResult(null);
-            toast.success("Quiz generated");
+            toast.success(`${response.quiz?.questions?.length || 0} quiz questions generated`);
         } catch (error) {
             showAIError(error, handleGenerateQuiz);
         } finally {

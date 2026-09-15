@@ -11,6 +11,9 @@ const BASE_DELAY_MS = 750;
 const MAX_DELAY_MS = 8000;
 const JITTER_MS = 250;
 const REQUEST_TIMEOUT_MS = 12000;
+const FLASHCARD_COUNT = 10;
+const QUIZ_QUESTION_COUNT = 10;
+const MINIMUM_STUDY_TEXT_LENGTH = 100;
 const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
 const RETRYABLE_ERROR_CODES = new Set([
     "ECONNRESET",
@@ -208,14 +211,33 @@ const parseStructuredResponse = (response, operation) => {
     }
 };
 
+const requireStudyText = (text) => {
+    const studyText = String(text || "").trim();
+
+    if (studyText.length < MINIMUM_STUDY_TEXT_LENGTH) {
+        throw new AIServiceError(
+            "This document does not contain enough readable text. Please upload a text-based PDF.",
+            {
+                code: "DOCUMENT_TEXT_INSUFFICIENT",
+                statusCode: 422,
+                retryable: false,
+            }
+        );
+    }
+
+    return studyText;
+};
+
 /**
  * Generate Flashcards matching FlashCard Schema
  */
 export const generateFlashcards = async (text) => {
+    const studyText = requireStudyText(text);
     const prompt = `Analyze the following study text and extract key concepts, rules, terms, or historical events. 
-Create clear educational flashcards consisting of focused questions and thorough explanations as answers.
+Create exactly ${FLASHCARD_COUNT} distinct educational flashcards consisting of focused questions and thorough explanations as answers.
+Cover different important parts of the source. Every question and answer must be grounded in the provided text; do not create generic placeholder cards.
 Text:
-${text}`;
+${studyText}`;
 
     const response = await callGemini({
         model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
@@ -224,6 +246,8 @@ ${text}`;
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.ARRAY,
+                minItems: FLASHCARD_COUNT,
+                maxItems: FLASHCARD_COUNT,
                 items: {
                     type: Type.OBJECT,
                     properties: {
@@ -245,10 +269,13 @@ ${text}`;
  * Generate Quiz matching Quiz and Question Schema
  */
 export const generateQuiz = async (text) => {
+    const studyText = requireStudyText(text);
     const prompt = `Based directly on the following text, extract core concepts and create a comprehensive multiple choice quiz. 
+Create exactly ${QUIZ_QUESTION_COUNT} distinct questions covering different important parts of the source.
 Every generated question must have exactly 4 unique options, and one unambiguous correct answer matching one of those options exactly.
+Every question must be grounded in the provided text; do not create generic placeholder questions.
 Text:
-${text}`;
+${studyText}`;
 
     const response = await callGemini({
         model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
@@ -260,6 +287,8 @@ ${text}`;
                 properties: {
                     questions: {
                         type: Type.ARRAY,
+                        minItems: QUIZ_QUESTION_COUNT,
+                        maxItems: QUIZ_QUESTION_COUNT,
                         items: {
                             type: Type.OBJECT,
                             properties: {
@@ -267,6 +296,8 @@ ${text}`;
                                 // Strictly enforces your validator array rule of 4 options
                                 options: { 
                                     type: Type.ARRAY, 
+                                    minItems: 4,
+                                    maxItems: 4,
                                     items: { type: Type.STRING }
                                 },
                                 correctAnswer: { type: Type.STRING },
