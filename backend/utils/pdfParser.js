@@ -1,5 +1,22 @@
 import fs from "fs/promises";
-import { PDFParse } from "pdf-parse";
+
+let PDFParseClass;
+
+const loadPDFParser = async () => {
+    if (!PDFParseClass) {
+        const canvas = await import("@napi-rs/canvas");
+
+        // pdfjs-dist expects these browser geometry globals in Node. Loading
+        // them explicitly also makes Vercel include the native canvas package.
+        globalThis.DOMMatrix ??= canvas.DOMMatrix;
+        globalThis.ImageData ??= canvas.ImageData;
+        globalThis.Path2D ??= canvas.Path2D;
+
+        ({ PDFParse: PDFParseClass } = await import("pdf-parse"));
+    }
+
+    return PDFParseClass;
+};
 
 /**
  * Extract text from PDF file
@@ -7,6 +24,8 @@ import { PDFParse } from "pdf-parse";
  * @returns {Promise<{text: string, numPages: number}>}
  */
 export const extractTextFromPDF = async (source) => {
+    let parser;
+
     try {
         const dataBuffer = typeof source === "string"
             ? await fs.readFile(source)
@@ -17,7 +36,8 @@ export const extractTextFromPDF = async (source) => {
         }
 
         // pdf-parse expects a Uint8Array, not a Buffer
-        const parser = new PDFParse(new Uint8Array(dataBuffer));
+        const PDFParse = await loadPDFParser();
+        parser = new PDFParse(new Uint8Array(dataBuffer));
 
         const data = await parser.getText();
 
@@ -27,7 +47,6 @@ export const extractTextFromPDF = async (source) => {
             info: data.info,
         };
 
-        await parser.destroy();
         return result;
 
     } catch (error) {
@@ -36,5 +55,7 @@ export const extractTextFromPDF = async (source) => {
         throw new Error(
             `Failed to extract text from PDF: ${error.message}`
         );
+    } finally {
+        await parser?.destroy();
     }
 };
