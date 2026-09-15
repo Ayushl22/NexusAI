@@ -1,6 +1,7 @@
 const errorHandler = (err, req, res, next) => {
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Server Error';
+  const isAIServiceError = err.name === 'AIServiceError';
 
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
@@ -40,14 +41,33 @@ const errorHandler = (err, req, res, next) => {
     statusCode = 401;
   }
 
-  console.error('Unhandled error in middleware:', err);
-  res.status(statusCode).json({
+  if (isAIServiceError) {
+    console.error('AI request failed:', {
+      code: err.code,
+      statusCode,
+      retryable: err.retryable,
+      causeStatus: err.cause?.status || err.cause?.statusCode || null,
+    });
+  } else {
+    console.error('Request failed:', err);
+  }
+
+  const response = {
     success: false,
     message,
-    stack: process.env.NODE_ENV === 'development'
-      ? err.stack
-      : undefined,
-  });
+  };
+
+  if (isAIServiceError) {
+    response.code = err.code;
+    response.retryable = err.retryable;
+    if (err.retryable) {
+      res.set('Retry-After', '5');
+    }
+  } else if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+  }
+
+  res.status(statusCode).json(response);
 };
 
 export default errorHandler;

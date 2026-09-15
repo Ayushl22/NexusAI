@@ -7,7 +7,7 @@ import ChatInterface from "../../components/common/ChatInterface";
 import FlashcardComponent from "../../components/flashcards/FlashcardComponent";
 import QuizComponent from "../../components/quizzes/QuizComponent";
 import { getDocumentById } from "../../services/documentService";
-import { generateFlashcards, generateQuiz, generateSummary, chat, explainConcept, getChatHistory } from "../../services/aiService";
+import { generateFlashcards, generateQuiz, generateSummary, chat, explainConcept, getChatHistory, getAIErrorMessage } from "../../services/aiService";
 import { getFlashcards, reviewFlashcard, toggleStarFlashcard } from "../../services/flashcardService";
 import { getQuiz, submitQuiz } from "../../services/quizService";
 
@@ -27,6 +27,13 @@ const DocumentDetailPage = () => {
     const [answers, setAnswers] = useState([]);
     const [submitted, setSubmitted] = useState(false);
     const [result, setResult] = useState(null);
+    const [aiError, setAiError] = useState(null);
+
+    const showAIError = (error, retry) => {
+        const message = getAIErrorMessage(error);
+        setAiError({ message, retry });
+        toast.error(message);
+    };
 
     const fetchDetail = async () => {
         try {
@@ -50,32 +57,35 @@ const DocumentDetailPage = () => {
     }, [id]);
 
     const handleGenerateSummary = async () => {
+        setAiError(null);
         setActionLoading(true);
         try {
             const response = await generateSummary(id);
             setSummary(response.summary || "No summary generated");
             toast.success("Summary generated");
         } catch (error) {
-            toast.error("Failed to generate summary");
+            showAIError(error, handleGenerateSummary);
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleGenerateFlashcards = async () => {
+        setAiError(null);
         setActionLoading(true);
         try {
             const response = await generateFlashcards(id);
             setFlashcards(response.flashcards || []);
             toast.success("Flashcards generated");
         } catch (error) {
-            toast.error("Failed to generate flashcards");
+            showAIError(error, handleGenerateFlashcards);
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleGenerateQuiz = async () => {
+        setAiError(null);
         setActionLoading(true);
         try {
             const response = await generateQuiz(id);
@@ -85,20 +95,21 @@ const DocumentDetailPage = () => {
             setResult(null);
             toast.success("Quiz generated");
         } catch (error) {
-            toast.error("Failed to generate quiz");
+            showAIError(error, handleGenerateQuiz);
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleSendChat = async (message) => {
+        setAiError(null);
         setChatLoading(true);
         try {
             const response = await chat(id, message);
             const history = response.chat?.messages || [];
             setChatMessages(history.map((item) => ({ role: item.role, content: item.content })));
         } catch (error) {
-            toast.error("Chat request failed");
+            showAIError(error, () => handleSendChat(message));
         } finally {
             setChatLoading(false);
         }
@@ -106,13 +117,14 @@ const DocumentDetailPage = () => {
 
     const handleExplainConcept = async () => {
         if (!concept.trim()) return;
+        setAiError(null);
         setActionLoading(true);
         try {
             const response = await explainConcept(concept, id);
             setConceptResponse(response.explanation || "No explanation available");
             toast.success("Explanation generated");
         } catch (error) {
-            toast.error("Failed to explain concept");
+            showAIError(error, handleExplainConcept);
         } finally {
             setActionLoading(false);
         }
@@ -170,6 +182,20 @@ const DocumentDetailPage = () => {
                     <h1 className="text-2xl font-semibold text-slate-100">{document?.title || "Document"}</h1>
                 </div>
             </div>
+
+            {aiError ? (
+                <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100 sm:flex-row sm:items-center sm:justify-between">
+                    <span>{aiError.message}</span>
+                    <button
+                        type="button"
+                        onClick={aiError.retry}
+                        disabled={actionLoading || chatLoading}
+                        className="rounded-xl bg-amber-400 px-4 py-2 font-semibold text-slate-950 transition hover:bg-amber-300 disabled:opacity-60"
+                    >
+                        Try again
+                    </button>
+                </div>
+            ) : null}
 
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                 <div className="space-y-6">

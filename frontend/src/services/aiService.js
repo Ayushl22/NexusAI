@@ -1,6 +1,17 @@
 import axiosInstance from "../utils/axiosInstance";
 import { API_PATHS } from "../utils/apiPath";
 
+export const getAIErrorMessage = (error) => {
+    const status = error.response?.status;
+    const serverMessage = error.response?.data?.message;
+
+    if (status === 503) {
+        return serverMessage || "AI is busy right now. Please try again in a moment.";
+    }
+
+    return serverMessage || "The AI request failed. Please try again.";
+};
+
 export const generateFlashcards =
     async (documentId) => {
         const response =
