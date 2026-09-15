@@ -41,11 +41,7 @@ app.use((req, res, next) => {
   next();
 });
 
-/*
-|--------------------------------------------------------------------------
-| Middleware
-|--------------------------------------------------------------------------
-*/
+
 
 app.use(
   cors({
@@ -64,11 +60,7 @@ app.use(
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-/*
-|--------------------------------------------------------------------------
-| Static Files & Directory Initialization
-|--------------------------------------------------------------------------
-*/
+
 
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -77,11 +69,7 @@ if (!fs.existsSync(uploadDir)) {
 
 app.use('/uploads', express.static(uploadDir));
 
-/*
-|--------------------------------------------------------------------------
-| Health Check Route
-|--------------------------------------------------------------------------
-*/
+
 
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -90,11 +78,6 @@ app.get('/', (req, res) => {
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
 
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
@@ -103,11 +86,6 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/progress', progressRoutes);
 
-/*
-|--------------------------------------------------------------------------
-| 404 Handler
-|--------------------------------------------------------------------------
-*/
 
 app.use((req, res) => {
   res.status(404).json({
@@ -117,19 +95,11 @@ app.use((req, res) => {
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Error Handler
-|--------------------------------------------------------------------------
-*/
+
+
 
 app.use(errorHandler);
 
-/*
-|--------------------------------------------------------------------------
-| Start Server
-|--------------------------------------------------------------------------
-*/
 
 const PORT = process.env.PORT || 8000;
 
@@ -138,12 +108,6 @@ const server = app.listen(PORT, () => {
     `🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`
   );
 });
-
-/*
-|--------------------------------------------------------------------------
-| Handle Unhandled Promise Rejections
-|--------------------------------------------------------------------------
-*/
 
 process.on('unhandledRejection', (err) => {
   console.error(`Unhandled Rejection: ${err.message}`);
