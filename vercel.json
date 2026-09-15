@@ -6,7 +6,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": "backend/node_modules/@napi-rs/canvas*/**"
+      "includeFiles": "backend/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"
     }
   },
   "rewrites": [
