@@ -1,7 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import "dotenv/config";
 
-const MODEL_NAME = "gemini-3.1-flash-lite";
+const DEFAULT_MODEL_NAME = "gemini-3.5-flash-lite";
+const DEFAULT_FALLBACK_MODELS = [
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+];
 const MAX_ATTEMPTS = 4;
 const BASE_DELAY_MS = 750;
 const MAX_DELAY_MS = 8000;
@@ -18,6 +22,21 @@ const RETRYABLE_ERROR_CODES = new Set([
     "UND_ERR_SOCKET",
 ]);
 let ai;
+
+const getModelNames = (requestedModel) => {
+    const configuredFallbacks = String(process.env.GEMINI_FALLBACK_MODELS || "")
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean);
+
+    return [...new Set([
+        requestedModel,
+        process.env.GEMINI_MODEL,
+        DEFAULT_MODEL_NAME,
+        ...configuredFallbacks,
+        ...DEFAULT_FALLBACK_MODELS,
+    ].filter(Boolean))];
+};
 
 export class AIServiceError extends Error {
     constructor(message, { code, statusCode, retryable, cause } = {}) {
@@ -104,10 +123,15 @@ const getBackoffDelay = (retryNumber) => {
  * The SDK's own retries are disabled to avoid multiplying retry attempts.
  */
 export const callGemini = async (request, operation = "generate-content") => {
+    const modelNames = getModelNames(request.model);
+
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+        const model = modelNames[Math.min(attempt - 1, modelNames.length - 1)];
+
         try {
             return await getAI().models.generateContent({
                 ...request,
+                model,
                 config: {
                     ...request.config,
                     httpOptions: {
@@ -127,7 +151,7 @@ export const callGemini = async (request, operation = "generate-content") => {
                 const delayMs = getBackoffDelay(retryNumber);
                 console.warn(
                     `[Gemini] ${operation} retry ${retryNumber}/${MAX_ATTEMPTS - 1} ` +
-                    `in ${delayMs}ms (status: ${status || "network/timeout"})`
+                    `in ${delayMs}ms (model: ${model}, status: ${status || "network/timeout"})`
                 );
                 await wait(delayMs);
                 continue;
@@ -194,7 +218,7 @@ Text:
 ${text}`;
 
     const response = await callGemini({
-        model: MODEL_NAME,
+        model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -227,7 +251,7 @@ Text:
 ${text}`;
 
     const response = await callGemini({
-        model: MODEL_NAME,
+        model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -270,7 +294,7 @@ Text:
 ${text}`;
 
     const response = await callGemini({
-        model: MODEL_NAME,
+        model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
         contents: prompt
     }, "generate-summary");
 
@@ -306,7 +330,7 @@ User Question: ${message}`;
     contents.push({ role: "user", parts: [{ text: systemAndQueryPrompt }] });
 
     const response = await callGemini({
-        model: MODEL_NAME,
+        model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
         contents: contents
     }, "document-chat");
 
@@ -324,7 +348,7 @@ export const explainConcept = async (concept, context) => {
     }
 
     const response = await callGemini({
-        model: MODEL_NAME,
+        model: process.env.GEMINI_MODEL || DEFAULT_MODEL_NAME,
         contents: prompt
     }, "explain-concept");
 
