@@ -351,7 +351,7 @@ Create a `.env` file inside the `backend` directory.
 ```env
 PORT=8000
 
-MONGO_URI=your_mongodb_atlas_connection_string
+MONGODB_URI=your_mongodb_atlas_connection_string
 
 JWT_SECRET=your_jwt_secret
 
@@ -416,7 +416,7 @@ Add the required environment variables:
 
 ```env
 PORT=8000
-MONGO_URI=your_mongodb_atlas_connection_string
+MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_secret
 GEMINI_API_KEY=your_gemini_api_key
 ```
@@ -575,7 +575,7 @@ Configure:
 
 ```env
 PORT=8000
-MONGO_URI=your_mongodb_atlas_connection_string
+MONGODB_URI=your_mongodb_atlas_connection_string
 JWT_SECRET=your_jwt_secret
 GEMINI_API_KEY=your_gemini_api_key
 ```
@@ -633,11 +633,16 @@ http://localhost:8000
 The frontend API configuration uses:
 
 ```javascript
-export const BASE_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:8000";
+const configuredApiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+export const BASE_URL = configuredApiUrl ||
+    (import.meta.env.DEV ? "http://localhost:8000" : "");
 ```
 
 When Docker builds the frontend, the backend URL is supplied using the `VITE_API_URL` build argument.
+
+For a combined Vercel deployment, leave `VITE_API_URL` unset so the browser
+uses same-origin `/api` requests. See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md)
+for the complete deployment and environment setup.
 
 ---
 

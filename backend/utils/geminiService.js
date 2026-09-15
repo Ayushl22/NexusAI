@@ -1,11 +1,20 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import dotenv from "dotenv";
+import "dotenv/config";
 
-dotenv.config();
-
-// Initialize the Gemini client using your environment configurations
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL_NAME = "gemini-3.1-flash-lite";
+let ai;
+
+const getAI = () => {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not configured");
+    }
+
+    if (!ai) {
+        ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
+
+    return ai;
+};
 
 /**
  * Generate Flashcards matching FlashCard Schema
@@ -16,7 +25,7 @@ Create clear educational flashcards consisting of focused questions and thorough
 Text:
 ${text}`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: MODEL_NAME,
         contents: prompt,
         config: {
@@ -49,7 +58,7 @@ Every generated question must have exactly 4 unique options, and one unambiguous
 Text:
 ${text}`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: MODEL_NAME,
         contents: prompt,
         config: {
@@ -92,7 +101,7 @@ Organize key points logically using clean markdown headings, bullet points, and 
 Text:
 ${text}`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: MODEL_NAME,
         contents: prompt
     });
@@ -128,7 +137,7 @@ User Question: ${message}`;
 
     contents.push({ role: "user", parts: [{ text: systemAndQueryPrompt }] });
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: MODEL_NAME,
         contents: contents
     });
@@ -146,7 +155,7 @@ export const explainConcept = async (concept, context) => {
         prompt += `\n\nTo align your explanations perfectly with their school/course work framework, prioritize context elements from this source text snippet:\n${context}`;
     }
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: MODEL_NAME,
         contents: prompt
     });

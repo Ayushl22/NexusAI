@@ -25,7 +25,7 @@ const documentSchema = new mongoose.Schema(
 
     filePath: {
       type: String,
-      required: true,
+      default: null,
     },
 
     fileType: {

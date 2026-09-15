@@ -7,6 +7,7 @@ import { chunkText } from "../utils/textChunker.js";
 
 import fs from "fs/promises";
 import mongoose from "mongoose";
+import path from "path";
 
 /**
  * @desc    Upload PDF document
@@ -23,12 +24,15 @@ export const uploadDocument = async (req, res, next) => {
             });
         }
 
+        const storedFileName = req.file.filename ||
+            `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(req.file.originalname)}`;
+
         const document = await Document.create({
             user: req.user._id,
             title: req.body.title || req.file.originalname,
             originalName: req.file.originalname,
-            fileName: req.file.filename,
-            filePath: req.file.path,
+            fileName: storedFileName,
+            filePath: req.file.path || null,
             fileType: req.file.mimetype,
             fileSize: req.file.size,
             status: "processing",
@@ -37,7 +41,7 @@ export const uploadDocument = async (req, res, next) => {
 
         try {
             // Extract text from PDF
-            const pdfData = await extractTextFromPDF(req.file.path);
+            const pdfData = await extractTextFromPDF(req.file.buffer || req.file.path);
 
             // Generate chunks for AI processing
             const chunks = chunkText(pdfData.text);
@@ -72,7 +76,7 @@ export const uploadDocument = async (req, res, next) => {
         }
     } catch (error) {
         // Remove uploaded file if processing fails
-        if (req.file) {
+        if (req.file?.path) {
             await fs.unlink(req.file.path).catch(() => {});
         }
 
@@ -265,7 +269,7 @@ export const deleteDocument = async (req, res, next) => {
         });
 
         // Delete physical file
-        if (document.filePath) {
+        if (document.filePath && !document.filePath.startsWith("memory:")) {
             await fs.unlink(document.filePath).catch(() => {});
         }
 

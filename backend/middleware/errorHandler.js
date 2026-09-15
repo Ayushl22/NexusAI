@@ -25,8 +25,8 @@ const errorHandler = (err, req, res, next) => {
 
   // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
-    message = 'File size exceeds the maximum limit of 10MB';
-    statusCode = 400;
+    message = 'File is too large for this deployment';
+    statusCode = 413;
   }
 
   // JWT errors

@@ -1,5 +1,9 @@
-export const BASE_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:8000";
+const configuredApiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+// Vercel uses same-origin /api requests. Local Vite development keeps working
+// out of the box, and VITE_API_URL can override either environment.
+export const BASE_URL = configuredApiUrl ||
+    (import.meta.env.DEV ? "http://localhost:8000" : "");
 
 export const API_PATHS = {
     AUTH: {
