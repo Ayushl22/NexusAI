@@ -6,10 +6,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 60,
-      "includeFiles": [
-        "backend/node_modules/@napi-rs/canvas/**",
-        "backend/node_modules/@napi-rs/canvas-linux-x64-gnu/**"
-      ]
+      "includeFiles": "backend/node_modules/@napi-rs/canvas*/**"
     }
   },
   "rewrites": [
